@@ -13,17 +13,29 @@ $ramScore = $ramGB * 10
 $score += $ramScore
 
 # Storage Score (based on type and speed)
-$disk = Get-PhysicalDisk | Select-Object MediaType, Size
+$disks = Get-PhysicalDisk | Select-Object MediaType, Size
 $diskScore = 0
-if ($disk.MediaType -eq "SSD") {
-    $diskScore = 100
-} elseif ($disk.MediaType -eq "NVMe") {
-    $diskScore = 150
-} else {
-    $diskScore = 50
+
+# Take the fastest disk type as primary score
+foreach ($disk in $disks) {
+    $currentScore = 0
+    if ($disk.MediaType -eq "SSD") {
+        $currentScore = 100
+    } elseif ($disk.MediaType -eq "NVMe") {
+        $currentScore = 150
+    } else {
+        $currentScore = 50
+    }
+    
+    # Get size in GB (handling array properly)
+    $diskSizeGB = [math]::Round($disk.Size / 1GB, 2)
+    $currentScore += [Math]::Min($diskSizeGB / 10, 50)  # Cap storage points at 50
+    
+    # Keep the highest score if multiple disks
+    if ($currentScore -gt $diskScore) {
+        $diskScore = $currentScore
+    }
 }
-$diskSizeGB = $disk.Size / 1GB
-$diskScore += [Math]::Min($diskSizeGB / 10, 50)  # Cap storage points at 50
 $score += $diskScore
 
 # Final weighted score
@@ -35,6 +47,10 @@ Write-Host "CPU: $($cpu.Name)"
 Write-Host "CPU Score: $cpuScore"
 Write-Host "RAM: $ramGB GB"
 Write-Host "RAM Score: $ramScore"
-Write-Host "Storage Type: $($disk.MediaType)"
+Write-Host "`nStorage Information:"
+foreach ($disk in $disks) {
+    $diskSizeGB = [math]::Round($disk.Size / 1GB, 2)
+    Write-Host "Disk Type: $($disk.MediaType), Size: $diskSizeGB GB"
+}
 Write-Host "Storage Score: $diskScore"
 Write-Host "`nFinal Performance Score: $finalScore"
