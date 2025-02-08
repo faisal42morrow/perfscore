@@ -1,6 +1,10 @@
 # Run this in PowerShell to get a performance score
 $score = 0
 
+# Get price input
+Write-Host -NoNewline "Price: "
+$price = Read-Host
+
 # CPU Score (base score from CPU frequency and cores)
 $cpu = Get-WmiObject -Class Win32_Processor
 $cpuScore = $cpu.MaxClockSpeed * $cpu.NumberOfCores / 1000
@@ -54,3 +58,17 @@ foreach ($disk in $disks) {
 }
 Write-Host "Storage Score: $diskScore"
 Write-Host "`nFinal Performance Score: $finalScore"
+
+# Calculate and display price-performance ratio if price was provided
+if ($price -ne "na") {
+    try {
+        $priceNum = [double]$price
+        $ratio = [Math]::Round($finalScore / $priceNum * 100, 2)
+        Write-Host "`nPrice: $$price"
+        Write-Host "Performance-to-Price Ratio: $ratio (score per $100)"
+        Write-Host "(Higher ratio means better value for money)"
+    }
+    catch {
+        Write-Host "`nInvalid price input. Please enter a number or 'na'."
+    }
+}
