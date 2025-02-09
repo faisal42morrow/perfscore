@@ -5,22 +5,20 @@ $score = 0
 Write-Host -NoNewline "Price: "
 $price = Read-Host
 
-# CPU Score (base score from CPU frequency and cores)
+# CPU Score
 $cpu = Get-WmiObject -Class Win32_Processor
 $cpuScore = $cpu.MaxClockSpeed * $cpu.NumberOfCores / 1000
 $score += $cpuScore
 
-# Memory Score (GB of RAM * speed if available)
+# Memory Score
 $ram = Get-WmiObject -Class Win32_PhysicalMemory
 $ramGB = ($ram | Measure-Object -Property Capacity -Sum).Sum / 1GB
 $ramScore = $ramGB * 10
 $score += $ramScore
 
-# Storage Score (based on type and speed)
-$disks = Get-PhysicalDisk | Select-Object MediaType, Size
+# Storage Score
+$disks = Get-PhysicalDisk | Select-Object MediaType
 $diskScore = 0
-
-# Take the fastest disk type as primary score
 foreach ($disk in $disks) {
     $currentScore = 0
     if ($disk.MediaType -eq "SSD") {
@@ -30,45 +28,24 @@ foreach ($disk in $disks) {
     } else {
         $currentScore = 50
     }
-    
-    # Get size in GB (handling array properly)
-    $diskSizeGB = [math]::Round($disk.Size / 1GB, 2)
-    $currentScore += [Math]::Min($diskSizeGB / 10, 50)  # Cap storage points at 50
-    
-    # Keep the highest score if multiple disks
     if ($currentScore -gt $diskScore) {
         $diskScore = $currentScore
     }
 }
 $score += $diskScore
 
-# Final weighted score
+# Final score
 $finalScore = [Math]::Round($score, 2)
+Write-Host "Performance Score: $finalScore"
 
-# Output results
-Write-Host "`nPerformance Metrics:"
-Write-Host "CPU: $($cpu.Name)"
-Write-Host "CPU Score: $cpuScore"
-Write-Host "RAM: $ramGB GB"
-Write-Host "RAM Score: $ramScore"
-Write-Host "`nStorage Information:"
-foreach ($disk in $disks) {
-    $diskSizeGB = [math]::Round($disk.Size / 1GB, 2)
-    Write-Host "Disk Type: $($disk.MediaType), Size: $diskSizeGB GB"
-}
-Write-Host "Storage Score: $diskScore"
-Write-Host "`nFinal Performance Score: $finalScore"
-
-# Calculate and display price-performance ratio if price was provided
+# Calculate ratio if price provided
 if ($price -ne "na") {
     try {
         $priceNum = [double]$price
-        $ratio = [Math]::Round($finalScore / $priceNum * 100, 2)
-        Write-Host "`nPrice: $$price"
-        Write-Host "Performance-to-Price Ratio: $ratio (score per $100)"
-        Write-Host "(Higher ratio means better value for money)"
+        $ratio = [Math]::Round($finalScore / $priceNum, 4)
+        Write-Host "Score/Price Ratio: $ratio"
     }
     catch {
-        Write-Host "`nInvalid price input. Please enter a number or 'na'."
+        Write-Host "Invalid price input. Enter a number or 'na'."
     }
 }
